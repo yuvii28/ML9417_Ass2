@@ -57,9 +57,10 @@ class newsClassifier:
                 self.wordCounts[article.stance][word] = 0.0
             self.wordCounts[article.stance][word] += 1.0
 
+    #Categorise the article as related or unrelated 
     def doesDiscuss(self, articles):
         result = []
-        for i in range(900):
+        for i in range(100):
             article = articles[i]
             #If all words from headline appear once, assume discussion
             headline = self.cleanup(str(article.headline))
@@ -68,53 +69,43 @@ class newsClassifier:
             numNot = 0.0
             size_headline = 0.0
             for word in headline:
-                if word not in ignore:
-                    size_headline += 1
-                    if word not in body:
-                        numNot += 1
+                size_headline += 1
+                if word not in body:
+                    numNot += 1
             if (numNot > size_headline*3 / 5):
                 stance = 'unrelated'
             result.append(stance)
         return result
 
-    #Take articles, and produce a list of stances for these
-    def makePrediction(self, articles):
-        result = []
-        numread = 0
-        for i in range(900):
-            article = articles[i]
-            if (numread % 1000 == 0):
-                print (str(numread) + " articles predicted")
-            numread += 1
-            headline = self.cleanup(str(article.headline))
-            body = self.cleanup(str(article.body))
-            words = headline.split(" ") + body.split(" ")
+       #Take articles, and produce a list of stances for these
+    def makePrediction(self, article):
+        result = 'discuss'
+        headline = self.cleanup(str(article.headline))
+        body = self.cleanup(str(article.body))
+        words = headline + body
+        #Scores of Discuss, Agree and Disagree stances
+        scores = [0.0, 0.0, 0.0]    
 
+        for word in words:
+            if (word in self.dictionary):
+                #Check for word in diff possible stances.
+                #Add 1 in  case there is no example of the word
+                discuss_Prob = math.log( (self.wordCounts['discuss'].get(word, 0.0) + 1) / (sum(self.wordCounts['discuss'].values()) + len(self.dictionary))) 
+                agree_Prob = math.log( (self.wordCounts['agree'].get(word, 0.0) + 1) / (sum(self.wordCounts['agree'].values()) + len(self.dictionary))) 
+                disagree_Prob = math.log( (self.wordCounts['disagree'].get(word, 0.0) + 1) / (sum(self.wordCounts['disagree'].values()) + len(self.dictionary))) 
+                
+                scores[0] += discuss_Prob
+                scores[1] += agree_Prob
+                scores[2] += disagree_Prob
 
-            scores = [0.0, 0.0, 0.0, 0.0]
+        #Take the best of the scores
+        if (max(scores) == scores[0]):
+            result = 'discuss'
+        elif (max(scores) == scores[1]):
+            result = 'agree'
+        elif (max(scores) == scores[2]):
+            result = 'disagree'
 
-            for word in words:
-                if (word in self.dictionary):
-                    #Check for word in diff possible stances.
-                    #Add 1 in  case there is no example of the word
-                    unrelated_Prob = math.log( (self.wordCounts['unrelated'].get(word, 0.0) + 1) / (sum(self.wordCounts['unrelated'].values()) + len(self.dictionary))) 
-                    discuss_Prob = math.log( (self.wordCounts['discuss'].get(word, 0.0) + 1) / (sum(self.wordCounts['discuss'].values()) + len(self.dictionary))) 
-                    agree_Prob = math.log( (self.wordCounts['agree'].get(word, 0.0) + 1) / (sum(self.wordCounts['agree'].values()) + len(self.dictionary))) 
-                    disagree_Prob = math.log( (self.wordCounts['disagree'].get(word, 0.0) + 1) / (sum(self.wordCounts['disagree'].values()) + len(self.dictionary))) 
-                    
-                    scores[0] += unrelated_Prob        
-                    scores[1] += discuss_Prob
-                    scores[2] += agree_Prob
-                    scores[3] += disagree_Prob
-
-            if (max(scores) == scores[0]):
-                result.append('unrelated')
-            elif (max(scores) == scores[1]):
-                result.append('discuss')
-            elif (max(scores) == scores[2]):
-                result.append('agree')
-            elif (max(scores) == scores[3]):
-                result.append('disagree')
         return result
 
 fakeNewsList = []
@@ -151,18 +142,22 @@ with open('competition_test_bodies.csv','rb') as tb2:
                 if(x.bodyId == bodyId):
                     x.addHeadline(row[0])
 
+#Determine the stances for each article as related or unrelated
 resultStances = newsClass.doesDiscuss(realNewsList)
+
+#For each article which is related, categorise as agree, disagree or discuss using naive bayes
+for i in range(len(resultStances)):
+    if (resultStances[i] == 'discuss'):
+        resultStances[i] = newsClass.makePrediction(realNewsList[i])
 
 
 #   The probability P (Category | words in article) is given by
 #      P (word_1 | Category) * P (word_2 | Category) * ... * P (word_n | Category) * P (Category)
 
-#   Denominator is usually used, however only exists to scale result so not needed
-#   (denominator will be consistent for all cetegories)
 
 with open('results.csv', 'wb') as csvfile:
     filewriter = csv.writer(csvfile, delimiter=',',
                             quotechar='|', quoting=csv.QUOTE_MINIMAL)
-    for i in range(900):
+    for i in range(len(resultStances)):
 #        filewriter.writerow([realNewsList[i].headline, realNewsList[i].bodyId, resultStances[i]])
         filewriter.writerow([realNewsList[i].bodyId, resultStances[i]])
