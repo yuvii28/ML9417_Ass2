@@ -3,20 +3,20 @@ import csv
 import string
 import math
 
-ignore = ['the', 'a', 'an']
+ignore = ['the', 'a', 'an', 'he', 'she', 'him', 'her', 'them']
 
 #Class to store each FakeNewsArticle
 class FakeNews:
-    def __init__(self,bodyId,body):
+    def __init__(self,bodyId, headline, stance):
         self.bodyId = bodyId
-        self.body = body
-        self.stance = ''
-        self.headline = ''
+        self.body = ''
+        self.stance = stance
+        self.headline = headline
     def addStance(self,stance):
         self.stance = stance 
 
-    def addHeadline(self,headline):
-        self.headline = headline
+    def addBody(self,body):
+        self.body = body
     
     def printO(self):
         print("Printing Object:{0}\nHeadline: {1}\nStance: {2}\nBody length: {3}\n").format(self.bodyId,self.headline,self.stance,len(self.body))
@@ -51,16 +51,17 @@ class newsClassifier:
 
         #Add word into data
         for word in words:
-            if (word not in self.dictionary):
-                self.dictionary.add(word)
-            if (word not in self.wordCounts[article.stance]):
-                self.wordCounts[article.stance][word] = 0.0
-            self.wordCounts[article.stance][word] += 1.0
+            if word not in ignore:
+                if (word not in self.dictionary):
+                    self.dictionary.add(word)
+                if (word not in self.wordCounts[article.stance]):
+                    self.wordCounts[article.stance][word] = 0.0
+                self.wordCounts[article.stance][word] += 1.0
 
     #Categorise the article as related or unrelated 
     def doesDiscuss(self, articles):
         result = []
-        for i in range(100):
+        for i in range(len(articles)):
             article = articles[i]
             #If all words from headline appear once, assume discussion
             headline = self.cleanup(str(article.headline))
@@ -87,16 +88,17 @@ class newsClassifier:
         scores = [0.0, 0.0, 0.0]    
 
         for word in words:
-            if (word in self.dictionary):
-                #Check for word in diff possible stances.
-                #Add 1 in  case there is no example of the word
-                discuss_Prob = math.log( (self.wordCounts['discuss'].get(word, 0.0) + 1) / (sum(self.wordCounts['discuss'].values()) + len(self.dictionary))) 
-                agree_Prob = math.log( (self.wordCounts['agree'].get(word, 0.0) + 1) / (sum(self.wordCounts['agree'].values()) + len(self.dictionary))) 
-                disagree_Prob = math.log( (self.wordCounts['disagree'].get(word, 0.0) + 1) / (sum(self.wordCounts['disagree'].values()) + len(self.dictionary))) 
-                
-                scores[0] += discuss_Prob
-                scores[1] += agree_Prob
-                scores[2] += disagree_Prob
+            if word not in ignore:
+                if (word in self.dictionary):
+                    #Check for word in diff possible stances.
+                    #Add 1 in  case there is no example of the word
+                    discuss_Prob = math.log( (self.wordCounts['discuss'].get(word, 0.0) + 1) / (sum(self.wordCounts['discuss'].values()) + len(self.dictionary))) 
+                    agree_Prob = math.log( (self.wordCounts['agree'].get(word, 0.0) + 1) / (sum(self.wordCounts['agree'].values()) + len(self.dictionary))) 
+                    disagree_Prob = math.log( (self.wordCounts['disagree'].get(word, 0.0) + 1) / (sum(self.wordCounts['disagree'].values()) + len(self.dictionary))) 
+                    
+                    scores[0] += discuss_Prob
+                    scores[1] += agree_Prob
+                    scores[2] += disagree_Prob
 
         #Take the best of the scores
         if (max(scores) == scores[0]):
@@ -115,38 +117,40 @@ with open('tb.csv','rb') as tb:
     with open('ts.csv','rb') as ts:
         tbreader = csv.reader(tb)
         tsreader = csv.reader(ts)
-        fakeNewsList = [FakeNews(int(row[0]),row[1]) for row in tbreader]
-        tempHead = []
-        tempStance = []
-        for row in tsreader:
-            bodyId = int(row[1])
+        fakeNewsList = [FakeNews(int(row[1]),row[0], row[2]) for row in tsreader]
+
+        for row in tbreader:
+            bodyId = int(row[0])
             for x in fakeNewsList:
                 if(x.bodyId == bodyId):
-                    x.addStance(row[2])
-                    x.addHeadline(row[0])
+                    x.addBody(row[1])
 
         for x in fakeNewsList:
             newsClass.readInput(x)
+
+print(len(fakeNewsList))
 
 realNewsList = []
 with open('competition_test_bodies.csv','rb') as tb2:
     with open('competition_test_stances_unlabeled.csv','rb') as ts2: 
         tbreader = csv.reader(tb2)
         tsreader = csv.reader(ts2)
-        realNewsList = [FakeNews(int(row[0]),row[1]) for row in tbreader]
-        tempHead = []
-        tempStance = []
-        for row in tsreader:
-            bodyId = int(row[1])
+
+        realNewsList = [FakeNews(int(row[1]), row[0], '') for row in tsreader]
+
+        for row in tbreader:
+            bodyId = int(row[0])
             for x in realNewsList:
                 if(x.bodyId == bodyId):
-                    x.addHeadline(row[0])
+                    x.addBody(row[1])
 
 #Determine the stances for each article as related or unrelated
 resultStances = newsClass.doesDiscuss(realNewsList)
 
 #For each article which is related, categorise as agree, disagree or discuss using naive bayes
-for i in range(len(resultStances)):
+for i in range(5000):
+    if (i % 100 == 0):
+        print(str(i) + " completed")
     if (resultStances[i] == 'discuss'):
         resultStances[i] = newsClass.makePrediction(realNewsList[i])
 
@@ -158,6 +162,6 @@ for i in range(len(resultStances)):
 with open('results.csv', 'wb') as csvfile:
     filewriter = csv.writer(csvfile, delimiter=',',
                             quotechar='|', quoting=csv.QUOTE_MINIMAL)
-    for i in range(len(resultStances)):
+    for i in range(5000):
 #        filewriter.writerow([realNewsList[i].headline, realNewsList[i].bodyId, resultStances[i]])
         filewriter.writerow([realNewsList[i].bodyId, resultStances[i]])
