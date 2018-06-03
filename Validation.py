@@ -17,8 +17,8 @@ if __name__ == "__main__":
     #List of the 10 subsets
     subSets = []
     #Load training data
-    with open('tb.csv','rb') as tb:
-        with open('ts.csv','rb') as ts:
+    with open('train_bodies.csv','rb') as tb:
+        with open('train_stances.csv','rb') as ts:
             tbreader = csv.reader(tb)
             tsreader = csv.reader(ts)
             fakeNewsList = [FakeNews(int(row[1]),row[0], row[2]) for row in tsreader]
@@ -48,7 +48,14 @@ if __name__ == "__main__":
     for subset in subSets:
         indexSet = int(subSets.index(subset))
         if (indexSet == 0):
-            continue
+            fileName = "Labled_Results_" + str(indexSet) + ".csv"
+            with open(fileName, 'wb') as csvfile:
+                filewriter = csv.writer(csvfile, delimiter=',',
+                                quotechar='"', quoting=csv.QUOTE_MINIMAL)
+                for i in range(len(subset)):
+                    filewriter.writerow([subset[i].headline,subset[i].bodyId, subset[i].stance])
+            break
+        """
         print("Trying out Subset: " + str(indexSet) + " with size: " + str(len(subset)))
         #Make its classifier
         newsClass = NewsClassifier()
@@ -69,7 +76,8 @@ if __name__ == "__main__":
             filewriter = csv.writer(csvfile, delimiter=',',
                                 quotechar='"', quoting=csv.QUOTE_MINIMAL)
             for i in range(len(subset)):
-                filewriter.writerow([subset[i].bodyId, subset[i].stance])
+                filewriter.writerow([subset[i].headline,subset[i].bodyId, subset[i].stance])
+
 
         #Determine the stances for each article in training set
         resultStances = newsClass.doesDiscuss(subset)
@@ -87,5 +95,6 @@ if __name__ == "__main__":
             filewriter = csv.writer(csvfile, delimiter=',',
                                     quotechar='"', quoting=csv.QUOTE_MINIMAL)
             for i in range(len(subset)):
-                filewriter.writerow([realNewsList[i].headline, realNewsList[i].bodyId, resultStances[i]])
+                filewriter.writerow([subset[i].headline, subset[i].bodyId, resultStances[i]])
         #        filewriter.writerow([subset[i].bodyId, resultStances[i]])
+"""

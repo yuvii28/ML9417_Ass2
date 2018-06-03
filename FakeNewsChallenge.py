@@ -10,7 +10,6 @@ import math
 ##############################################################
 
 
-
 #Class to store each FakeNewsArticle
 #Contains a headline, body id, body and a stance. 
 class FakeNews:
@@ -27,6 +26,8 @@ class FakeNews:
     
     def printO(self):
         print("Printing Object:{0}\nHeadline: {1}\nStance: {2}\nBody length: {3}\n").format(self.bodyId,self.headline,self.stance,len(self.body))
+
+
 
 #Class to classify articles, begins by going over training set
 #Has methods to train and predict FakeNews objects.

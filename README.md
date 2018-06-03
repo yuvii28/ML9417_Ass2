@@ -1,6 +1,5 @@
 # ML9417_Ass2
 
-
 ## Python Files
 
 ### FakeNewsChallenge.py
@@ -11,7 +10,9 @@ Writes results to result.csv in the format: Headline,Body ID,Stance.
 
 ### Validate.py
 Helper python script that also trains the classifer on the training data but then performs 10-fold validation to validate 
-our methods and increase accuracy between different optimisations.
+our methods and increase accuracy between different optimisations. Outputs to 10 csv file labeled with their subset number.
+Writes results of the k-fold validation to csv files named: labeled_results_x.csv and results_x.csv where x is the number of 
+the subset that was used to train the model. These outputs can then be used by scorer.py to get the various scores of the validation.
 
 ### Scorer.py
 Script provided by Fake News Challenge that takes a test set and your results and returns the accuracy and a score. 
